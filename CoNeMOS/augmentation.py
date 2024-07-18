@@ -22,10 +22,8 @@ def build_augmentation_model(im_shape,
                              nonlin_std=3.,
                              nonlin_scale=.0625,
                              randomise_res=False,
-                             downsample=False,
                              max_res_iso=4.,
                              max_res_aniso=8.,
-                             blur_factor=1.03,
                              bias_field_std=.5,
                              bias_scale=.025,
                              noise_hr=0.08,
@@ -85,11 +83,10 @@ def build_augmentation_model(im_shape,
 
         # blur
         sigma = l2i_et.blurring_sigma_for_downsampling(atlas_res, res, thickness=blur_res)
-        image = layers.DynamicGaussianBlur(0.75 * max_res / np.array(atlas_res), blur_factor)([image, sigma])
+        image = layers.DynamicGaussianBlur(0.75 * max_res / np.array(atlas_res), 1.03)([image, sigma])
 
         # downsample
-        if downsample:
-            image = layers.MimicAcquisition(atlas_res, target_res, output_shape, noise_std=noise_lr)([image, res])
+        image = layers.MimicAcquisition(atlas_res, target_res, output_shape, noise_std=noise_lr)([image, res])
 
     # intensity augmentation
     image = layers.IntensityAugmentation(noise_std=noise_hr, normalise=True, gamma_std=gamma, prob_noise=0.9)(image)
