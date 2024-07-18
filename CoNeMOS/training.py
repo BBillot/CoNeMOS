@@ -57,17 +57,19 @@ def training(image_dir,
              reduce_type='mean',
              checkpoint=None):
     """
-    :param image_dir:
-    :param labels_dir:
-    :param model_dir:
+    :param image_dir: path of folder with all training images.
+    :param labels_dir: path of folder with all corresponding label maps.
+    :param model_dir: path of a directory where the models will be saved during training.
+
+    # ----------------------------------------------- General parameters -----------------------------------------------
     :param segm_regions: sorted numpy array with all the segmentation regions to segment.
     Defaults to None, where we assume binary label maps (but we still need it when using conditioning, to know the size
     of the conditioning vector). Should not include background for partially annotated datasets.
     :param label_descriptor_dir: path (or list of paths) to folders containing label descriptors (numpy arrays that say
     which structure is segmented in each training label map). Defaults to None
     :param condition_type: whether to use FiLM conditioning (condition_type='film'), input channel conditioning
-    ('channel'), or no contitioning (None). Additionally we xcan also condition on the image (add _image) and condition
-    the very last likelihood layer (add _last)
+    ('channel'), or no conditioning (None). Additionally we can also condition on the image (add _image) and condition
+    the very last likelihood layer (add _last).
     :param n_conditioned_layers: number of layers to condition, starting from the end of the network. This only works if
     film is in condition_type. Leave to zero to condition all layers.
     :param labels_to_regions_indices: to use to convert label-based groud truth segmentations into hierarchical region-
@@ -77,44 +79,76 @@ def training(image_dir,
     :param subjects_prob: numpy array as long as the number of training subjects with relative probability of being
     sampled during training
     :param data_perc: percentage of the available training data to use. default is 100.
-    :param mask_loss:
-    :param batchsize:
-    :param output_shape:
-    :param flip_axis: None=flipping in any axis, set to False to disable
-    :param scaling_bounds:
-    :param rotation_bounds:
-    :param shearing_bounds:
-    :param translation_bounds:
-    :param nonlin_std:
-    :param nonlin_scale:
-    :param randomise_res:
-    :param downsample:
-    :param max_res_iso:
-    :param max_res_aniso:
-    :param blur_factor:
-    :param bias_field_std:
-    :param bias_scale:
-    :param noise_hr:
-    :param noise_lr:
-    :param norm_perc:
-    :param gamma:
-    :param n_levels:
-    :param unet_feat_count:
-    :param feat_multiplier:
+    :param mask_loss: When no conditioning is used (i.e. we use a regular UNet to predict all the labels together),
+    setting mask_loss to True enables us to compute a supervised loss only for the regions with available ground truth
+    (ie partial labels).
+    :param batchsize: (optional) number of images to use per mini-batch.
+    :param cropping_shape: (optional) size of the cropping to apply during training. Leave to None to apply no cropping.
+
+    # --------------------------------------------- Augmentation parameters --------------------------------------------
+    :param flip_axis: (optional) apply random flips to the training data as augmentation. Set to None to flip in any
+    direction, and to False to disable.
+    :param scaling_bounds: (optional) to apply scaling augmentation during training. it can either be:
+    1) a number, in which case the scaling factor is independently sampled from the uniform distribution of bounds
+    (1-scaling_bounds, 1+scaling_bounds) for each dimension.
+    2) the path to a numpy array of shape (2, n_dims), in which case the scaling factor in dimension i is sampled from
+    the uniform distribution of bounds (scaling_bounds[0, i], scaling_bounds[1, i]) for the i-th dimension.
+    3) False, in which case scaling is completely turned off.
+    Default is scaling_bounds = 0.2 (case 1)
+    :param rotation_bounds: (optional) same as scaling bounds but for the rotation angle, except that for case 1 the
+    bounds are centred on 0 rather than 1, i.e. (0+rotation_bounds[i], 0-rotation_bounds[i]).
+    :param shearing_bounds: (optional) same as rotation_bounds but for shearing augmentation.
+    :param translation_bounds: same as rotation_bounds but for translation augmentation.
+    :param nonlin_std: (optional) Standard deviation of the normal distribution from which we sample the first
+    tensor for synthesising the deformation field. Higher is more deformation. Set to 0 to completely deactivate.
+    :param nonlin_scale: (optional) Ratio between the size of the input label maps and the size of the sampled
+    tensor for synthesising the elastic deformation field. Higher means more local deformations.
+    :param randomise_res: whether to randomise the resolution of the input images as an augmentation strategy. In that
+    process, the images are: 1) blurred to simulate slice thickness, 2) downsampled at LR to simulate slice spacing,
+    and 3) resampled at the initial resolution.
+    :param max_res_iso: (optional) If randomise_res is True, this enables to control the upper bound of the uniform
+    distribution from which we sample the random resolution U(min_res, max_res_iso), where min_res is the resolution of
+    the input label maps. Must be a number, and default is 6. Set to None to deactivate it, but if randomise_res is
+    True, at least one of max_res_iso or max_res_aniso must be given.
+    :param max_res_aniso: If randomise_res is True, this enables to downsample the input volumes to a random LR in
+    only 1 (random) direction. This is done by randomly selecting a direction i in the range [0, n_dims-1], and sampling
+    a value in the corresponding uniform distribution U(min_res[i], max_res_aniso[i]), where min_res is the resolution
+    of the input label maps. Can be a number, a sequence, or a 1d numpy array. Set to None to deactivate it, but if
+    randomise_res is True, at least one of max_res_iso or max_res_aniso must be given.
+    :param bias_field_std: (optional) If strictly positive, this triggers the corruption of images with a bias field.
+    The bias field is obtained by sampling a first small tensor from a normal distribution, resizing it to
+    full size, and rescaling it to positive values by taking the voxel-wise exponential. bias_field_std designates the
+    std dev of the normal distribution from which we sample the first tensor.
+    Set to 0 to completely deactivate bias field corruption.
+    :param bias_scale: (optional) If bias_field_std is not 0, this designates the ratio between the size of
+    the input label maps and the size of the first sampled tensor for synthesising the bias field.
+    :param noise_hr: (optional) maximum standard deviation of the white noise to inject at HIGH resolution
+    :param noise_lr: (optional) maximum standard deviation of the white noise to inject at LOW resolution
+    :param norm_perc: (optional) percentile of the intensities to consider for normalisation
+    :param gamma: (optional) standard deviation for the
+
+    # ------------------------------------------ UNet architecture parameters ------------------------------------------
+    :param n_levels: (optional) number of level for the Unet.
+    :param unet_feat_count: (optional) number of convolutional layers per level.
+    :param feat_multiplier: (optional) multiply the number of feature by this number at each new level.
     :param activation: can be 'linear' (i.e. identity), 'softmax', 'sigmoid', 'relu', etc.
     :param final_pred_activation: can be 'linear' (i.e. identity), 'softmax', 'sigmoid', 'relu', etc.
-    :param n_conv_per_level:
-    :param conv_size:
-    :param norm_type:
+    :param n_conv_per_level: (optional) number of convolutional layers per level.
+    :param conv_size: (optional) size of the convolution kernels.
+    :param norm_type: type of normalisation to apply. Can be 'batch', 'instance', or None.
     :param multi_head: can be 'decoder' (each head is an entire decoder), 'layer' (we use an additional conv layer
     for each label to segment). Default is False, where nu multi_head is used.
-    :param lr:
-    :param steps_per_epoch:
-    :param n_epochs:
-    :param wl2_epochs:
-    :param boundary_weights:
+
+    # ----------------------------------------------- Training parameters ----------------------------------------------
+    :param lr: (optional) learning rate for the training.
+    :param steps_per_epoch: (optional) number of steps per epoch. Default is 10000. Since no online validation is
+    possible, this is equivalent to the frequency at which the models are saved.
+    :param n_epochs: (optional) number of epochs with the soft Dice loss function.
+    :param wl2_epochs: (optional) number of epochs for which the network (except the soft-max layer) is trained with L2
+    norm loss function.
+    :param boundary_weights: (optional) relative weight of boundary voxels when computing the Dice loss.
     :param reduce_type: function to compute the final loss scores across label values. Can be 'mean' or 'sum'.
-    :param checkpoint:
+    :param checkpoint: (optional) path of an already saved model to load before starting the training.
     """
 
     if condition_type not in [None, 'channel', 'film', 'film_image', 'film_last', 'film_image_last']:
