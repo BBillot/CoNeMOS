@@ -22,6 +22,7 @@ These functions are sorted in five categories:
         -get_largest_connected_component
         -compute_hard_volumes
         -compute_distance_map
+        -seg2contours
 3- editing all volumes in a folder: functions are more or less the same as 1, but they now apply to all the volumes
 in a given folder. Thus we provide folder paths rather than numpy arrays as inputs. It contains:
         -mask_images_in_dir
@@ -1046,6 +1047,34 @@ def compute_distance_map(labels, masking_labels=None, crop_margin=None):
         dist = tmp_dist
 
     return dist
+
+
+def seg2contour(labels):
+    """transform nd segmentation (label maps) to contour maps.
+    Adapted from neurite library, Adrian Dalca et al."""
+
+    # extract unique labels different from background
+    labels_list = np.unique(labels)
+    labels_list = np.delete(labels_list, np.where(labels_list == 0))
+
+    # get the contour of each label
+    contours = np.zeros_like(labels)
+    for l in labels_list:
+
+        # extract binary label map for this label
+        label_mask = labels == l
+
+        # extract contour map for this label from signed distance transform
+        label_mask_not = np.logical_not(label_mask)
+        posdst = distance_transform_edt(label_mask_not)  # get the distance outside the island
+        negdst = distance_transform_edt(label_mask)  # get the distance inside the island
+        dist = posdst * label_mask_not - negdst * label_mask
+        label_contours = np.logical_and(dist <= 0, dist > -1.01)
+
+        # assign contour to this label
+        contours[label_contours] = l
+
+    return contours
 
 
 def labels_to_regions(labels, labels_to_regions_indices):
