@@ -7,7 +7,7 @@ from keras import models
 # third-party imports
 from ext.lab2im import utils
 
-from hypernet import data_loader, augmentation, unet, metrics
+from CoNeMOS import data_loader, augmentation, unet, metrics
 
 
 def check_training(image_dir,

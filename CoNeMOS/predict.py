@@ -7,7 +7,7 @@ import keras.layers as KL
 from keras.models import Model
 
 # project imports
-from hypernet import unet, evaluate
+from CoNeMOS import unet, evaluate
 
 # third-party imports
 from ext.lab2im import utils, layers, edit_volumes

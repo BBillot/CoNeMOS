@@ -8,7 +8,7 @@ from keras.optimizers import Adam
 # third-party imports
 from ext.lab2im import utils
 
-from hypernet import data_loader, augmentation, unet, metrics
+from CoNeMOS import data_loader, augmentation, unet, metrics
 
 
 def training(image_dir,

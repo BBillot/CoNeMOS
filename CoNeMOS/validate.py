@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from tensorflow.python.summary.summary_iterator import summary_iterator
 
 # project imports
-from hypernet.predict import predict
+from CoNeMOS.predict import predict
 
 # third-party imports
 from ext.lab2im import utils

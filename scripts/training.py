@@ -1,4 +1,4 @@
-from hypernet.training import training
+from CoNeMOS.training import training
 import numpy as np
 
 image_dir = '/path/to/image/dir'

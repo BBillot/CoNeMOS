@@ -7,7 +7,7 @@ from keras import models
 from ext.lab2im import utils
 
 
-from hypernet import data_loader, augmentation
+from CoNeMOS import data_loader, augmentation
 
 
 def check_augmentation(image_dir,

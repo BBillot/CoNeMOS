@@ -3,7 +3,7 @@ from keras import Model
 import keras.layers as KL
 
 from ext.lab2im import utils
-from hypernet.film import FiLM
+from CoNeMOS.film import FiLM
 
 
 def unet(input_shape,
