@@ -11,7 +11,8 @@ n_conditioned_layers = 15
 segm_regions = np.arange(1, 6)
 label_descriptor_dir = '/data/vision/polina/scratch/bbillot/hypernet_data/training/labelled_regions/all_indiv'
 subjects_prob = '/path/to/numpy/vector/with/prob/to/samples/training/images.npy'
-batchsize = 1
+batchsize = 2
+cropping_shape = 96
 
 # spatial augm
 flip_axis = None
@@ -58,6 +59,7 @@ training(image_dir=image_dir,
          label_descriptor_dir=label_descriptor_dir,
          subjects_prob=subjects_prob,
          batchsize=batchsize,
+         cropping_shape=cropping_shape,
          flip_axis=flip_axis,
          scaling_bounds=scaling_bounds,
          rotation_bounds=rotation_bounds,
