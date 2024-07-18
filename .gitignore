@@ -1,3 +1,13 @@
 venv
 **/__pycache__/
 .idea
+
+CoNeMOS/check*
+ext/statannot
+
+scripts/checks
+scripts/testing
+scripts/validation
+scripts/script*
+
+commands
