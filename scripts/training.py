@@ -6,8 +6,8 @@ labels_dir = '/path/to/individual/labels/dir'
 model_dir = '/path/to/folder/where/all/training/data/will/be/saved'
 
 # general params
-condition_type = 'film_last'
-n_conditioned_layers = 15
+condition_type = 'film'
+n_conditioned_layers = 0  # this means all layers are conditioned
 segm_regions = np.arange(1, 6)
 label_descriptor_dir = '/data/vision/polina/scratch/bbillot/hypernet_data/training/labelled_regions/all_indiv'
 subjects_prob = '/path/to/numpy/vector/with/prob/to/samples/training/images.npy'
@@ -23,18 +23,23 @@ translation_bounds = 10
 nonlin_std = 4.
 nonlin_scale = .05
 
+# resolution augm
+randomise_res = False
+max_res_iso = 6.
+max_res_aniso = 6.
+
 # intensity augm
-bias_field_std = .8
+bias_field_std = 1.
 bias_scale = .03
-noise_hr = 0.03
-noise_lr = 0.02
+noise_hr = 0.01
+noise_lr = 0.01
 norm_perc = 0.005
 gamma = 0.4
 
 # architecture params
 n_levels = 4
 unet_feat_count = 16
-feat_multiplier = 1
+feat_multiplier = 2
 activation = 'relu'
 final_pred_activation = 'sigmoid'
 n_conv_per_level = 2
@@ -43,9 +48,9 @@ norm_type = None
 multi_head = False
 
 # learning
-lr = 1e-5
-steps_per_epoch = 500
-n_epochs = 98
+lr = 1e-4
+steps_per_epoch = 1000
+n_epochs = 50
 wl2_epochs = 2
 boundary_weights = 0
 checkpoint = None
@@ -67,6 +72,9 @@ training(image_dir=image_dir,
          translation_bounds=translation_bounds,
          nonlin_std=nonlin_std,
          nonlin_scale=nonlin_scale,
+         randomise_res=randomise_res,
+         max_res_iso=max_res_iso,
+         max_res_aniso=max_res_aniso,
          bias_field_std=bias_field_std,
          bias_scale=bias_scale,
          noise_hr=noise_hr,
