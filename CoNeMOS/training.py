@@ -31,7 +31,7 @@ def training(image_dir,
              translation_bounds=10,
              nonlin_std=4.,
              nonlin_scale=.05,
-             randomise_res=False,
+             randomise_res=True,
              max_res_iso=6.,
              max_res_aniso=6.,
              bias_field_std=1.,
@@ -154,7 +154,7 @@ def training(image_dir,
     if mask_loss and condition_type is not None:
         raise ValueError('cannot use loss masking with conditioning')
     if condition_type is not None and multi_head:
-        raise ValueError('cannot use multi-task learning (simultaneous segmetnation of all labels) with conditioning')
+        raise ValueError('cannot use multi-task learning (simultaneous segmentation of all labels) with conditioning')
 
     # prepare data files
     path_images, path_labels, path_descriptors, subjects_prob = data_loader.get_paths(image_dir,
@@ -166,7 +166,7 @@ def training(image_dir,
     # get label lists
     segm_regions = np.load(segm_regions) if segm_regions is not None else np.ones(1, dtype='int32')
     n_regions = len(segm_regions)
-    assert np.array_equal(segm_regions, np.arange(1, n_regions + 1)), 'labels should be increasing without skips'
+    assert np.array_equal(segm_regions, np.arange(1, n_regions + 1)), 'the label list should be [1...K] without holes'
     size_condition_vector = n_regions if condition_type is not None else 0
     n_output_unet_channels = 1 if ((n_regions < 2) | (condition_type is not None)) else n_regions
     if labels_to_regions_indices is not None:

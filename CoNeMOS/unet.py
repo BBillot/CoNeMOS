@@ -89,7 +89,7 @@ def unet(input_shape,
             list_binary_segm.append(conv_layer(1, 1, activation=None, name='unet_head%s_conv1x1' % (labels + 1))(tmp_x))
         x = KL.Concatenate(axis=-1, name='unet_likelihood')(list_binary_segm)
 
-    else:  # should go here if we use conditioning
+    else:
         x = decoder(x, n_dims, n_levels, n_features_init, feat_mult, n_conv_per_level, norm_type, conv_args,
                     encoder_model, condition, n_conditioned_layers, n_conv_layers)
         if condition_type in ['film_last', 'film_image_last']:  # if film in name the last layer is automatically filmed
