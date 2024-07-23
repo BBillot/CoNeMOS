@@ -5,8 +5,12 @@ from keras.models import Model
 from ext.lab2im import layers
 
 
-def metrics_model(input_model, n_channels, loss_type='dice', boundary_weights=100, reduce_type='mean',
-                  labels_to_regions_indices=None, mask_loss=False):
+def metrics_model(input_model,
+                  n_channels,
+                  loss_type='dice',
+                  boundary_weights=100,
+                  labels_to_regions_indices=None,
+                  mask_loss=False):
 
     # get prediction
     labels_pred = input_model.outputs[0]
@@ -31,7 +35,6 @@ def metrics_model(input_model, n_channels, loss_type='dice', boundary_weights=10
     # compute loss
     if loss_type == 'dice':
         loss = layers.DiceLoss(boundary_weights=boundary_weights,
-                               reduce_type=reduce_type,
                                make_probabilistic=False, name='loss')(loss_layer_inputs)
     elif loss_type == 'wl2':
         loss = layers.WeightedL2Loss(name='loss')(loss_layer_inputs)

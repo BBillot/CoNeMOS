@@ -54,7 +54,6 @@ def training(image_dir,
              n_epochs=500,
              wl2_epochs=5,
              boundary_weights=0,
-             reduce_type='mean',
              checkpoint=None):
     """
     :param image_dir: path of folder with all training images.
@@ -147,7 +146,6 @@ def training(image_dir,
     :param wl2_epochs: (optional) number of epochs for which the network (except the soft-max layer) is trained with L2
     norm loss function.
     :param boundary_weights: (optional) relative weight of boundary voxels when computing the Dice loss.
-    :param reduce_type: function to compute the final loss scores across label values. Can be 'mean' or 'sum'.
     :param checkpoint: (optional) path of an already saved model to load before starting the training.
     """
 
@@ -228,13 +226,13 @@ def training(image_dir,
     if (wl2_epochs > 0) & (metrics != 'distance_maps'):
         wl2_model = models.Model(unet_model.inputs, [unet_model.get_layer('unet_likelihood').output])
         wl2_model = metrics.metrics_model(wl2_model, n_output_unet_channels, 'wl2', boundary_weights,
-                                          labels_to_regions_indices=labels_to_regions_indices, mask_loss=mask_loss)
+                                          labels_to_regions_indices, mask_loss)
         train_model(wl2_model, input_generator, lr, wl2_epochs, steps_per_epoch, model_dir, 'wl2', checkpoint)
         checkpoint = os.path.join(model_dir, 'models', 'wl2_%03d.h5' % wl2_epochs)
 
     # fine-tuning with dice metric
-    final_model = metrics.metrics_model(unet_model, n_output_unet_channels, 'dice', boundary_weights, reduce_type,
-                                        labels_to_regions_indices=labels_to_regions_indices, mask_loss=mask_loss)
+    final_model = metrics.metrics_model(unet_model, n_output_unet_channels, 'dice', boundary_weights,
+                                        labels_to_regions_indices, mask_loss)
     train_model(final_model, input_generator, lr, n_epochs, steps_per_epoch, model_dir, 'dice', checkpoint)
 
 

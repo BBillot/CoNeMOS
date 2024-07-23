@@ -65,7 +65,6 @@ parser.add_argument("--steps_per_epoch", type=int, dest="steps_per_epoch", defau
 parser.add_argument("--n_epochs", type=int, dest="n_epochs", default=500)
 parser.add_argument("--wl2_epochs", type=int, dest="wl2_epochs", default=5)
 parser.add_argument("--boundary_weights", type=float, dest="boundary_weights", default=0)
-parser.add_argument("--reduce_type", type=str, dest="reduce_type", default='mean')
 parser.add_argument("--checkpoint", type=str, dest="checkpoint", default=None)
 
 
