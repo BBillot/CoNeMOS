@@ -26,17 +26,13 @@ def unet(input_shape,
     n_dims = len(input_shape) - 1
     conv_layer = getattr(KL, 'Conv%dD' % n_dims)
     conv_args = {'kernel_size': conv_size, 'activation': activation, 'padding': 'same', 'data_format': 'channels_last'}
-    if condition_type in ['film', 'film_image', 'film_last', 'film_image_last']:
+    conv_args_last = {'kernel_size': 1, 'activation': None, 'padding': 'same', 'data_format': 'channels_last'}
+    if condition_type is not None:
         conv_args['use_bias'] = False
 
-    # prepare conditioning
-    n_conv_layers = n_conv_per_level * (2 * n_levels - 1)
-    if condition_type in ['film_last', 'film_image_last']:  # if film in name the last layer is automatically filmed
-        n_conv_layers += 1
-    if condition_type not in ['film', 'film_image', 'film_last', 'film_image_last'] and n_conditioned_layers != 0:
-        raise ValueError('only specify n_conditioned_layers when condition_type is film or film_image, '
-                         'had {} and {}'.format(n_conditioned_layers, condition_type))
-    if condition_type in ['film', 'film_image', 'film_last', 'film_image_last'] and n_conditioned_layers == 0:
+    # prepare number of conditioned layer
+    n_conv_layers = n_conv_per_level * (2 * n_levels - 1) + 1
+    if condition_type is not None and n_conditioned_layers == 0:
         n_conditioned_layers = n_conv_layers
 
     # get input layer
@@ -49,8 +45,8 @@ def unet(input_shape,
         if isinstance(x, list):
             x = x[0]
 
-    # get MLP for conditioning
-    if condition_type in ['film', 'film_image', 'film_last', 'film_image_last']:
+    # get 4-layer MLP for conditioning
+    if condition_type is not None:
         condition = KL.Input(shape=[size_condition_vector], name='cond_input', dtype='float32')
         input_tensor = input_tensor + [condition] if isinstance(input_tensor, list) else [input_tensor, condition]
         for i in range(4):
@@ -62,13 +58,11 @@ def unet(input_shape,
     # down-arm
     x = encoder(x, n_dims, n_levels, n_features_init, feat_mult, n_conv_per_level, norm_type, conv_args,
                 condition, n_conditioned_layers, n_conv_layers)
+    encoder_model = Model(inputs=input_tensor, outputs=x)  # useful to find the layers to concatenate in up-arm
 
-    # build intermediate model
-    encoder_model = Model(inputs=input_tensor, outputs=x)
-
-    # condition on image
+    # prepare conditioning on image features if necessary
     x_pooled = KL.GlobalAveragePooling3D()(x)
-    if condition_type in ['film_image', 'film_image_last']:
+    if condition_type == 'film_image':
         condition = KL.Concatenate(axis=-1)([condition, x_pooled])
 
     # up-arm
@@ -77,7 +71,7 @@ def unet(input_shape,
         for labels in range(n_output_channels):
             tmp_x = decoder(x, n_dims, n_levels, n_features_init, feat_mult, n_conv_per_level, norm_type, conv_args,
                             encoder_model, None, 0, n_conv_layers, decoder_idx=labels + 1)
-            list_binary_segm.append(conv_layer(1, 1, activation=None, name='unet_head%s_conv1x1' % (labels + 1))(tmp_x))
+            list_binary_segm.append(conv_layer(1, **conv_args_last, name='unet_head%s_conv1x1' % (labels + 1))(tmp_x))
         x = KL.Concatenate(axis=-1, name='unet_likelihood')(list_binary_segm)
 
     elif multi_head == 'layer':
@@ -86,17 +80,17 @@ def unet(input_shape,
         list_binary_segm = list()
         for labels in range(n_output_channels):
             tmp_x = conv_block(x, n_dims, 1, 1, conv_args, norm_type, 'net_head%s' % (labels + 1), False, None)
-            list_binary_segm.append(conv_layer(1, 1, activation=None, name='unet_head%s_conv1x1' % (labels + 1))(tmp_x))
+            list_binary_segm.append(conv_layer(1, **conv_args_last, name='unet_head%s_conv1x1' % (labels + 1))(tmp_x))
         x = KL.Concatenate(axis=-1, name='unet_likelihood')(list_binary_segm)
 
     else:
         x = decoder(x, n_dims, n_levels, n_features_init, feat_mult, n_conv_per_level, norm_type, conv_args,
                     encoder_model, condition, n_conditioned_layers, n_conv_layers)
-        if condition_type in ['film_last', 'film_image_last']:  # if film in name the last layer is automatically filmed
-            x = conv_layer(n_output_channels, 1, activation=None, use_bias=False, name='unet_likelihood')(x)
+        if condition_type is not None:
+            x = conv_layer(n_output_channels, **conv_args_last, use_bias=False, name='unet_likelihood')(x)
             x = FiLM(n_dims=n_dims, name='unet_likelihood_film')([x, condition])
         else:
-            x = conv_layer(n_output_channels, 1, activation=None, name='unet_likelihood')(x)
+            x = conv_layer(n_output_channels, **conv_args_last, name='unet_likelihood')(x)
     x = KL.Activation(final_pred_activation, name='unet_%s' % final_pred_activation)(x)
 
     return Model(inputs=input_tensor, outputs=x, name='unet')

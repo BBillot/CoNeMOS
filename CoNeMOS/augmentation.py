@@ -10,8 +10,6 @@ from ext.lab2im import edit_tensors as l2i_et
 
 def build_augmentation_model(im_shape,
                              atlas_res,
-                             condition_type,
-                             size_condition_vector=0,
                              output_shape=None,
                              output_div_by_n=None,
                              flip_axis=None,  # None=flipping in any axis, set to False to disable
@@ -40,11 +38,6 @@ def build_augmentation_model(im_shape,
     image_input = KL.Input(shape=im_shape + [1], name='image_input', dtype='float32')
     labels_input = KL.Input(shape=im_shape + [1], name='labels_input', dtype='int32')
     model_inputs = [image_input, labels_input]
-    if condition_type == 'channel':
-        cond_input = KL.Input(shape=[size_condition_vector], name='cond_input', dtype='float32')
-        model_inputs.append(cond_input)
-    else:
-        cond_input = None
 
     # deform labels
     labels, image = layers.RandomSpatialDeformation(scaling_bounds=scaling_bounds,
@@ -90,12 +83,6 @@ def build_augmentation_model(im_shape,
 
     # intensity augmentation
     image = layers.IntensityAugmentation(noise_std=noise_hr, normalise=True, gamma_std=gamma, prob_noise=0.9)(image)
-
-    # conditional label
-    if condition_type == 'channel':
-        cond = KL.Lambda(lambda x: l2i_et.expand_dims(x, axis=[1] * n_dims), name='expand_dims_cond')(cond_input)
-        cond = KL.Lambda(lambda x: tf.tile(x, [1, *output_shape, 1]), name='tile_cond')(cond)
-        image = KL.Lambda(lambda x: tf.concat([x[0], tf.cast(x[1], x[0].dtype)], -1), name='cat_im_cond')([image, cond])
 
     # dummy layer enables to keep the labels when plugging this model to other models
     labels = KL.Lambda(lambda x: tf.cast(x, dtype='int32'), name='labels_out')(labels)

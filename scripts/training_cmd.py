@@ -13,16 +13,18 @@ parser.add_argument("--labels_dir", nargs='+', type=str, dest="labels_dir", defa
 parser.add_argument("--model_dir", type=str, dest="model_dir", default=None)
 
 # GENERAL
-parser.add_argument("--condition_type", type=str, dest="condition_type", default=None)
-parser.add_argument("--n_conditioned_layers", type=int, dest="n_conditioned_layers", default=0)
 parser.add_argument("--segm_regions", type=str, dest="segm_regions", default=None)
 parser.add_argument("--labels_to_regions_indices", type=str, dest="labels_to_regions_indices", default=None)
-parser.add_argument("--label_descriptor_dir", type=str, dest="label_descriptor_dir", default=None)
-parser.add_argument("--subjects_prob", type=str, dest="subjects_prob", default=None)
-parser.add_argument("--data_perc", type=float, dest="data_perc", default=100)
-parser.add_argument("--loss_masking", action='store_true', dest="mask_loss")
 parser.add_argument("--batchsize", type=int, dest="batchsize", default=2)
 parser.add_argument("--cropping_shape", type=int, dest="cropping_shape", default=None)
+parser.add_argument("--data_perc", type=float, dest="data_perc", default=100)
+parser.add_argument("--subjects_prob", type=str, dest="subjects_prob", default=None)
+
+# ---------------------------------------------- Conditioning parameters -----------------------------------------------
+parser.add_argument("--condition_type", type=str, dest="condition_type", default=None)
+parser.add_argument("--label_descriptor_dir", type=str, dest="label_descriptor_dir", default=None)
+parser.add_argument("--n_conditioned_layers", type=int, dest="n_conditioned_layers", default=0)
+parser.add_argument("--loss_masking", action='store_true', dest="mask_loss")
 
 # ---------------------------------------------- Augmentation parameters -----------------------------------------------
 

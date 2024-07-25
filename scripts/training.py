@@ -6,13 +6,16 @@ labels_dir = '/path/to/individual/labels/dir'
 model_dir = '/path/to/folder/where/all/training/data/will/be/saved'
 
 # general params
-condition_type = 'film'
-n_conditioned_layers = 0  # this means all layers are conditioned
 segm_regions = np.arange(1, 6)
-label_descriptor_dir = '/data/vision/polina/scratch/bbillot/hypernet_data/training/labelled_regions/all_indiv'
-subjects_prob = '/path/to/numpy/vector/with/prob/to/samples/training/images.npy'
 batchsize = 2
 cropping_shape = 96
+subjects_prob = '/path/to/numpy/vector/with/prob/to/samples/training/images.npy'
+
+# conditioning params
+condition_type = 'film'
+label_descriptor_dir = '/data/vision/polina/scratch/bbillot/hypernet_data/training/labelled_regions/all_indiv'
+n_conditioned_layers = 0  # this means all layers are conditioned
+mask_loss = False
 
 # spatial augm
 flip_axis = None
@@ -58,13 +61,14 @@ checkpoint = None
 training(image_dir=image_dir,
          labels_dir=labels_dir,
          model_dir=model_dir,
-         condition_type=condition_type,
-         n_conditioned_layers=n_conditioned_layers,
          segm_regions=segm_regions,
-         label_descriptor_dir=label_descriptor_dir,
-         subjects_prob=subjects_prob,
          batchsize=batchsize,
          cropping_shape=cropping_shape,
+         subjects_prob=subjects_prob,
+         condition_type=condition_type,
+         label_descriptor_dir=label_descriptor_dir,
+         n_conditioned_layers=n_conditioned_layers,
+         mask_loss=mask_loss,
          flip_axis=flip_axis,
          scaling_bounds=scaling_bounds,
          rotation_bounds=rotation_bounds,

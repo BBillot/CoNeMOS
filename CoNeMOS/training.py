@@ -7,23 +7,28 @@ from keras.optimizers import Adam
 
 # third-party imports
 from ext.lab2im import utils
-
 from CoNeMOS import data_loader, augmentation, unet, metrics
 
 
 def training(image_dir,
              labels_dir,
              model_dir,
-             condition_type=None,
-             n_conditioned_layers=0,
+
+             # general
              segm_regions=None,
              labels_to_regions_indices=None,
-             label_descriptor_dir=None,
-             subjects_prob=None,
-             data_perc=100,
-             mask_loss=False,
              batchsize=1,
              cropping_shape=None,
+             data_perc=100,
+             subjects_prob=None,
+
+             # conditioning
+             condition_type=None,
+             label_descriptor_dir=None,
+             n_conditioned_layers=0,
+             mask_loss=False,
+
+             # augmentation
              flip_axis=None,
              scaling_bounds=.2,
              rotation_bounds=180,
@@ -40,6 +45,8 @@ def training(image_dir,
              noise_lr=0.01,
              norm_perc=0.005,
              gamma=0.4,
+
+             # architecture
              n_levels=4,
              unet_feat_count=16,
              feat_multiplier=2,
@@ -49,6 +56,8 @@ def training(image_dir,
              conv_size=3,
              norm_type=None,
              multi_head=False,
+
+             # learning
              lr=1e-4,
              steps_per_epoch=1000,
              n_epochs=500,
@@ -64,25 +73,27 @@ def training(image_dir,
     :param segm_regions: sorted numpy array with all the segmentation regions to segment.
     Defaults to None, where we assume binary label maps (but we still need it when using conditioning, to know the size
     of the conditioning vector). Should not include background for partially annotated datasets.
-    :param label_descriptor_dir: path (or list of paths) to folders containing label descriptors (numpy arrays that say
-    which structure is segmented in each training label map). Defaults to None
-    :param condition_type: whether to use FiLM conditioning (condition_type='film'), input channel conditioning
-    ('channel'), or no conditioning (None). Additionally we can also condition on the image (add _image) and condition
-    the very last likelihood layer (add _last).
-    :param n_conditioned_layers: number of layers to condition, starting from the end of the network. This only works if
-    film is in condition_type. Leave to zero to condition all layers.
     :param labels_to_regions_indices: to use to convert label-based groud truth segmentations into hierarchical region-
     based segmentations. 2D matrix specifying how to split labels into regions. We assume that each region is the sum of
     one or several labels. This should be of size n_region * n_label. Needs to be triangular inferior, so order the
     labels in segmentation_labels consequently.
-    :param subjects_prob: numpy array as long as the number of training subjects with relative probability of being
-    sampled during training
+    This is only used when predicting all labels simultaneously.
+    :param batchsize: (optional) number of images to use per mini-batch.
+    :param cropping_shape: (optional) size of the cropping to apply during training. Leave to None to apply no cropping.
     :param data_perc: percentage of the available training data to use. default is 100.
+    :param subjects_prob: numpy array as long as the number of training subjects with relative probability of being
+    sampled during training.
+
+    # --------------------------------------------- Conditioning parameters --------------------------------------------
+    :param condition_type: whether to use FiLM conditioning (condition_type='film') or no conditioning (None).
+    Additionally we can also condition on the image (add _image).
+    :param label_descriptor_dir: path (or list of paths) to folders containing label descriptors (numpy arrays that say
+    which structure is segmented in each training label map). Defaults to None.
+    :param n_conditioned_layers: number of layers to condition, starting from the end of the network. This only works if
+    film is in condition_type. Leave to zero to condition all layers.
     :param mask_loss: When no conditioning is used (i.e. we use a regular UNet to predict all the labels together),
     setting mask_loss to True enables us to compute a supervised loss only for the regions with available ground truth
     (ie partial labels).
-    :param batchsize: (optional) number of images to use per mini-batch.
-    :param cropping_shape: (optional) size of the cropping to apply during training. Leave to None to apply no cropping.
 
     # --------------------------------------------- Augmentation parameters --------------------------------------------
     :param flip_axis: (optional) apply random flips to the training data as augmentation. Set to None to flip in any
@@ -121,10 +132,10 @@ def training(image_dir,
     Set to 0 to completely deactivate bias field corruption.
     :param bias_scale: (optional) If bias_field_std is not 0, this designates the ratio between the size of
     the input label maps and the size of the first sampled tensor for synthesising the bias field.
-    :param noise_hr: (optional) maximum standard deviation of the white noise to inject at HIGH resolution
-    :param noise_lr: (optional) maximum standard deviation of the white noise to inject at LOW resolution
-    :param norm_perc: (optional) percentile of the intensities to consider for normalisation
-    :param gamma: (optional) standard deviation for the
+    :param noise_hr: (optional) maximum standard deviation of the white noise to inject at HIGH resolution.
+    :param noise_lr: (optional) maximum standard deviation of the white noise to inject at LOW resolution.
+    :param norm_perc: (optional) percentile of the intensities to consider for normalisation.
+    :param gamma: (optional) standard deviation for the gamma transform for the augmentation.
 
     # ------------------------------------------ UNet architecture parameters ------------------------------------------
     :param n_levels: (optional) number of level for the Unet.
@@ -149,8 +160,8 @@ def training(image_dir,
     :param checkpoint: (optional) path of an already saved model to load before starting the training.
     """
 
-    if condition_type not in [None, 'channel', 'film', 'film_image', 'film_last', 'film_image_last']:
-        raise ValueError('condition_type should be one of: channel, film, film_image, film_last, film_image_last')
+    if condition_type not in [None, 'film', 'film_image']:
+        raise ValueError('condition_type should be one of: None, film, film_image')
     if mask_loss and condition_type is not None:
         raise ValueError('cannot use loss masking with conditioning')
     if condition_type is not None and multi_head:
@@ -179,8 +190,6 @@ def training(image_dir,
     im_shape, _, _, _, _, atlas_res = utils.get_volume_info(path_images[0], aff_ref=np.eye(4))
     augmentation_model = augmentation.build_augmentation_model(im_shape,
                                                                atlas_res,
-                                                               condition_type,
-                                                               size_condition_vector,
                                                                output_shape=cropping_shape,
                                                                output_div_by_n=2 ** n_levels,
                                                                flip_axis=flip_axis,
